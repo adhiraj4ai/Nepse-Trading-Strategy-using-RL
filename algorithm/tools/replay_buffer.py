@@ -52,14 +52,15 @@ class ReplayBuffer:
         tuple
             A tuple containing batches of states, actions, rewards, next_states, and dones as torch tensors.
         """
-        experiences = random.sample(self.storage, k=self.batch_size)
+        sample_size = min(len(self.storage), self.batch_size)
+        experiences = random.sample(self.storage, k=sample_size)
         states, actions, rewards, next_states, dones = zip(*experiences)
 
         return (
             torch.tensor(states, dtype=torch.float32),
-            torch.tensor(actions, dtype=torch.float32),
-            torch.tensor(rewards, dtype=torch.float32),
-            next_states,
+            actions,
+            rewards,
+            torch.tensor(next_states, dtype=torch.float32),
             dones
         )
 

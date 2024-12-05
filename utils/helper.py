@@ -26,9 +26,9 @@ def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
 
-def plot_behavior(data_input, states_buy, states_sell, profit):
+def plot_behavior(data_input, states_buy, states_sell, profit, total_rewards, profit_per_episode):
     """
-    Plot the graph of the total value of the portfolio against time.
+    Plot the graph of the total value of the portfolio against time, and display reward/profit evolution.
 
     Parameters
     ----------
@@ -40,16 +40,35 @@ def plot_behavior(data_input, states_buy, states_sell, profit):
         The time steps at which the model is selling.
     profit : float
         The total profit made by the model.
+    total_rewards : list
+        List of total rewards per episode.
+    profit_per_episode : list
+        List of total profit per episode.
 
     Returns
     -------
     None
     """
-    fig = plt.figure(figsize=(15, 5))
-    plt.plot(data_input, color='r', lw=2.)
-    plt.plot(data_input, '^', markersize=10, color='m', label='Buying signal', markevery=states_buy)
-    plt.plot(data_input, 'v', markersize=10, color='k', label='Selling signal', markevery=states_sell)
-    plt.title('Total gains: %f' % (profit))
-    plt.legend()
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6))
+
+    # Plot portfolio value with buy and sell signals
+    axs[0].plot(data_input, color='r', lw=2.)
+    axs[0].plot(data_input, '^', markersize=10, color='m', label='Buying signal', markevery=states_buy)
+    axs[0].plot(data_input, 'v', markersize=10, color='k', label='Selling signal', markevery=states_sell)
+    axs[0].set_title('Total Gains: %f' % profit)
+    axs[0].set_xlabel('Time Step')
+    axs[0].set_ylabel('Portfolio Value')
+    axs[0].legend()
+
+    # Plot total reward and profit per episode
+    axs[1].plot(total_rewards, label="Total Reward", color='blue')
+    axs[1].plot(profit_per_episode, label="Total Profit", color='green')
+    axs[1].set_title('Reward and Profit per Episode')
+    axs[1].set_xlabel('Episode')
+    axs[1].set_ylabel('Value')
+    axs[1].legend()
+
+    # Save and display the plot
+    plt.tight_layout()
     plt.savefig('../output/' + str(datetime.datetime.now().strftime('%Y-%m-%d')) + '.png')
     plt.show()

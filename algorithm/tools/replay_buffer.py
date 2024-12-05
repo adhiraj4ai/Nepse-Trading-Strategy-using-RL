@@ -1,7 +1,8 @@
 import random
+from collections import deque
+
 import torch
 import torch.nn
-from collections import deque
 
 
 class ReplayBuffer:
@@ -57,10 +58,10 @@ class ReplayBuffer:
         states, actions, rewards, next_states, dones = zip(*experiences)
 
         return (
-            torch.tensor(states, dtype=torch.float32),
+            torch.stack(states).float(),
             actions,
             rewards,
-            torch.tensor(next_states, dtype=torch.float32),
+            torch.stack(next_states).float(),
             dones
         )
 

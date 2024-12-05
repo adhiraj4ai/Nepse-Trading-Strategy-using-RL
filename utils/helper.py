@@ -1,6 +1,6 @@
 import datetime
-
 import math
+
 from matplotlib import pyplot as plt
 
 
@@ -26,7 +26,7 @@ def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
 
-def plot_behavior(data_input, states_buy, states_sell, profit, total_rewards, profit_per_episode):
+def plot_behavior(data_input, states_buy, states_sell, profit, rewards):
     """
     Plot the graph of the total value of the portfolio against time, and display reward/profit evolution.
 
@@ -40,10 +40,8 @@ def plot_behavior(data_input, states_buy, states_sell, profit, total_rewards, pr
         The time steps at which the model is selling.
     profit : float
         The total profit made by the model.
-    total_rewards : list
+    rewards : list
         List of total rewards per episode.
-    profit_per_episode : list
-        List of total profit per episode.
 
     Returns
     -------
@@ -61,8 +59,8 @@ def plot_behavior(data_input, states_buy, states_sell, profit, total_rewards, pr
     axs[0].legend()
 
     # Plot total reward and profit per episode
-    axs[1].plot(total_rewards, label="Total Reward", color='blue')
-    axs[1].plot(profit_per_episode, label="Total Profit", color='green')
+    axs[1].plot(rewards, label="Total Reward", color='blue')
+    axs[1].plot(profit, label="Total Profit", color='green')
     axs[1].set_title('Reward and Profit per Episode')
     axs[1].set_xlabel('Episode')
     axs[1].set_ylabel('Value')
@@ -70,5 +68,5 @@ def plot_behavior(data_input, states_buy, states_sell, profit, total_rewards, pr
 
     # Save and display the plot
     plt.tight_layout()
-    plt.savefig('../output/' + str(datetime.datetime.now().strftime('%Y-%m-%d')) + '.png')
+    plt.savefig('./output/' + str(datetime.datetime.now().strftime('%Y-%m-%d')) + '.png')
     plt.show()

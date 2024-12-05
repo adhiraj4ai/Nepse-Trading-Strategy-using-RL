@@ -1,10 +1,11 @@
+from typing import Tuple, List
+
 import numpy as np
 import pandas as pd
-from typing import Any, Tuple, List
-
 import torch
 
 from environment.base import Environment
+from utils.helper import plot_behavior
 
 
 class Nepse(Environment):
@@ -34,15 +35,22 @@ class Nepse(Environment):
         """
         # Load CSV data into a DataFrame
         df = pd.read_csv(self.csv_file)
-
-        # Ensure the "Date" column is parsed as datetime
         df['Date'] = pd.to_datetime(df['Date'])
+
+        # Sort data in descending order by date
+        df = df.sort_values(
+            by=['Date'], ascending=True, ignore_index=True,
+        )
+
         df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
-
-        # Drop any rows with missing or invalid "Close" values
         df = df.dropna(subset=['Close'])
-        self.data = df['Close'].values
 
+
+
+        # Set the "Date" column as the index
+        df.set_index('Date', inplace=True)
+        self.data = df['Close'].values
+        self.data = [float(x) for x in self.data]
         # Check if there is enough data to create states with the window size
         if len(self.data) < self.window_size:
             raise ValueError("The data size is smaller than the window size.")
@@ -53,13 +61,13 @@ class Nepse(Environment):
 
         :return: The initial state.
         """
-        self.current_step = 0
+        self.current_step = self.window_size - 1
         self.states_buy = []
         self.states_sell = []
         self.done = False
-        return self.get_State(self.data, self.current_step, self.window_size)
+        return self.get_state(self.data, self.current_step, self.window_size)
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+    def step(self, action: int) -> Tuple[np.ndarray, float, float, bool, dict]:
         """
         Take an action in the environment.
 
@@ -69,22 +77,22 @@ class Nepse(Environment):
         if self.done:
             raise ValueError("The environment is already done. Please reset it.")
 
-        reward = self.compute_reward(action, self.data, self.current_step, self.states_buy, self.states_sell)
+        reward, profit = self.compute_reward(action, self.data, self.current_step, self.states_buy, self.states_sell)
 
         # Update to the next step
         self.current_step += 1
         self.done = self.current_step >= len(self.data) - 1
 
-        next_state = self.get_State(self.data, self.current_step, self.window_size)
+        next_state = self.get_state(self.data, self.current_step, self.window_size)
         info = {
             "step": self.current_step,
             "states_buy": self.states_buy,
             "states_sell": self.states_sell,
         }
-        return next_state, reward, self.done, info
+        return next_state, reward, profit, self.done, info
 
     @staticmethod
-    def get_State(data, t, window_size) -> torch.Tensor:
+    def get_state(data, t, window_size) -> torch.Tensor:
         """
         Generate the state representation for the RL agent.
 
@@ -106,7 +114,7 @@ class Nepse(Environment):
             window = [data[0]] * padding_length + list(window)
 
         # Convert window prices to percentage changes relative to the first value of the window
-        state = [(price / window[0]) - 1 for price in window]
+        state = [1 - (price / window[0]) for price in window]
 
         # Convert the list to a PyTorch tensor
         state_tensor = torch.tensor(state, dtype=torch.float32)
@@ -127,16 +135,17 @@ class Nepse(Environment):
         """
         current_price = data[t]
         reward = 0
+        profit = 0
 
         if action == 0:  # Hold
-            reward = 0  # No immediate reward for holding
+            reward = -0.5  # Slight penalty for inaction
 
-        elif action == 1:  # Buy
-            if t in states_buy:
+        elif action == 1:
+            if t in states_buy:  # Trying to buy when already holding stock at this time step
                 reward = -1  # Penalty for redundant buy
             else:
                 states_buy.append(t)
-                reward = 0  # Neutral reward for buying
+                reward = 1  # Neutral reward for buying
 
         elif action == 2:  # Sell
             if len(states_buy) == 0:  # No stock to sell
@@ -144,8 +153,10 @@ class Nepse(Environment):
             else:
                 buy_price_index = states_buy.pop(0)  # FIFO selling strategy
                 buy_price = data[buy_price_index]
-                profit = current_price - buy_price
+                profit = max(current_price - buy_price, 0)  # Reward as a percentage of buy price
                 states_sell.append(t)
-                reward = profit  # Reward is the profit or loss from the trade
+                reward = 10 if profit > 0 else -5
 
-        return reward
+        return reward, profit
+
+
